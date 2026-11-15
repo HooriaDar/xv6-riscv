@@ -1,4 +1,3 @@
-// Saved registers for kernel context switches.
 struct context {
   uint64 ra;
   uint64 sp;
@@ -88,8 +87,7 @@ struct proc {
   int killed;           // If non-zero, have been killed
   int xstate;           // Exit status to be returned to parent's wait
   int pid;              // Process ID
-  int sandbox_mask;             // Mask of rejected syscalls
-  char sandbox_path[MAXPATH];
+
   // wait_lock must be held when using this:
   struct proc *parent; // Parent process
 
@@ -98,6 +96,9 @@ struct proc {
   uint64 sz;                   // Size of process memory (bytes)
   pagetable_t pagetable;       // User page table
   struct trapframe *trapframe; // data page for trampoline.S
+  #ifdef LAB_PGTBL
+    struct usyscall *usyscall;
+  #endif
   struct context context;      // swtch() here to run process
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
