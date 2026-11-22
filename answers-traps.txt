@@ -1,0 +1,65 @@
+Lab: traps -- answers to the RISC-V assembly questions
+(addresses below are from user/call.asm built with riscv64-linux-gnu-gcc;
+check them against your own call.asm, they can shift with a different
+compiler version)
+
+1. Which registers contain arguments to functions? For example, which
+   register holds 13 in main's call to printf?
+
+   Integer/pointer arguments are passed in a0-a7 (a0 = 1st argument,
+   a1 = 2nd, ...). In main's call to printf, a0 holds the address of the
+   format string "%d %d\n", a1 holds 12 (f(8)+1), and a2 holds 13:
+
+       24:  li  a2,13
+       26:  li  a1,12
+
+2. Where is the call to function f in the assembly code for main? Where
+   is the call to g? (Hint: the compiler may inline functions.)
+
+   There are no calls. The compiler evaluated f(8)+1 at compile time
+   (f(8) = g(8) = 11, +1 = 12) and just loads the constant 12 into a1
+   ("li a1,12" at 0x26). Inside f itself, the call to g is also inlined:
+   f's body is just "addiw a0,a0,3" (at 0x14), the same as g's.
+
+3. At what address is the function printf located?
+
+   0x70e   ("30: jal 70e <printf>", and "000000000000070e <printf>:")
+
+4. What value is in the register ra just after the jalr to printf in main?
+
+   ra = 0x34, the address of the instruction right after the call
+   ("34: li a0,0"). (In this build the call is a "jal" rather than an
+   auipc/jalr pair, but either way the jump-and-link writes the address
+   of the next instruction, pc+4, into ra.)
+
+5. Run the following code.
+
+       unsigned int i = 0x00646c72;
+       printf("H%x Wo%s", 57616, (char *) &i);
+
+   What is the output?
+
+   Output: He110 World
+
+   57616 decimal = 0xe110, so %x prints "e110" -> "He110".
+   RISC-V is little-endian, so the bytes of i in memory are
+   0x72 0x6c 0x64 0x00 = 'r' 'l' 'd' '\0', so %s prints "rld" -> "World".
+
+   If RISC-V were big-endian, what would you set i to in order to yield
+   the same output? Would you need to change 57616 to a different value?
+
+   i would have to be 0x726c6400 so that the bytes in memory are still
+   'r' 'l' 'd' '\0' in that order. 57616 would NOT need to change: %x
+   prints the numeric value of the integer, which does not depend on
+   byte order in memory.
+
+6. In the following code, what is going to be printed after 'y='? (note:
+   the answer is not a specific value.) Why does this happen?
+
+       printf("x=%d y=%d", 3);
+
+   y= prints some unpredictable value. printf takes its arguments from
+   the argument registers: the format string is in a0 and 3 is in a1.
+   For the second %d, printf reads the next argument slot, a2, but the
+   caller never set a2, so y= prints whatever garbage value happened to
+   be left in a2 from earlier code.

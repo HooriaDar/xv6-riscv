@@ -140,9 +140,26 @@ panic(char *s)
   panicking = 1;
   printk("panic: ");
   printk("%s\n", s);
+  backtrace();
   panicked = 1; // freeze uart output from other CPUs
   for (;;)
     ;
+}
+
+// print the return address of each stack frame on the
+// current kernel stack, innermost first.
+void
+backtrace(void)
+{
+  uint64 fp = r_fp();
+  uint64 page = PGROUNDDOWN(fp); // the kernel stack is one page
+
+  printk("backtrace:\n");
+  while (PGROUNDDOWN(fp) == page) {
+    uint64 ra = *(uint64 *)(fp - 8);
+    printk("%p\n", (void *)ra);
+    fp = *(uint64 *)(fp - 16); // caller's frame pointer
+  }
 }
 
 void
